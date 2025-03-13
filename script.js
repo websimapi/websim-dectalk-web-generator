@@ -7,12 +7,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const convertButton = document.getElementById('convert-button');
     const dectalkContainer = document.getElementById('dectalk-container');
     const dectalkPlayer = document.getElementById('dectalk-player');
-    const dectalkText = document.getElementById('dctalk-text');
+    const dectalkText = document.getElementById('dectalk-text');
     const playDectalk = document.getElementById('play-dectalk');
     const stopDectalk = document.getElementById('stop-dectalk');
     const copyText = document.getElementById('copy-text');
     const inputText = document.getElementById('input-text');
     const loadText = document.getElementById('load-text');
+    
+    // Log DOM element status for debugging
+    debugLog('DOM Elements loaded', {
+        audioUpload: !!audioUpload,
+        playerContainer: !!playerContainer,
+        dectalkContainer: !!dectalkContainer,
+        dectalkText: !!dectalkText
+    });
     
     // Debug logger function
     function debugLog(message, data) {
@@ -347,7 +355,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Convert audio to DECTalk format
                     const dectalkString = dectalk.analyze(audioBuffer);
                     debugLog('Generated DECTalk string', dectalkString.substring(0, 50) + '...');
-                    dectalkText.value = dectalkString;
+                    
+                    // Check if dectalkText element exists before setting value
+                    if (dectalkText) {
+                        dectalkText.value = dectalkString;
+                    } else {
+                        errorLog('dectalkText element not found', document.getElementById('dectalk-text'));
+                        throw new Error('UI element not found: dectalkText');
+                    }
                     
                     // Generate audio from DECTalk
                     debugLog('Generating speech from DECTalk string');
@@ -359,9 +374,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     
                     const blob = bufferToWave(generatedBuffer, 0, generatedBuffer.length);
-                    dectalkPlayer.src = URL.createObjectURL(blob);
+                    if (dectalkPlayer) {
+                        dectalkPlayer.src = URL.createObjectURL(blob);
+                    } else {
+                        errorLog('dectalkPlayer element not found');
+                    }
                     
-                    dectalkContainer.classList.remove('hidden');
+                    if (dectalkContainer) {
+                        dectalkContainer.classList.remove('hidden');
+                    }
                     
                     // Reset button
                     convertButton.textContent = "Convert to DECTalk";
@@ -416,20 +437,41 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load from text
     loadText.addEventListener('click', function() {
-        const text = inputText.value.trim();
+        const text = inputText?.value?.trim() || '';
         if (!text) {
             alert('Please enter DECTalk text');
             return;
         }
         
-        initDECTalk();
+        const initialized = initDECTalk();
+        if (!initialized) {
+            errorLog('DECTalk initialization failed when loading from text');
+            return;
+        }
+        
         try {
             // Generate audio from DECTalk text
             const buffer = dectalk.textToSpeech(text);
             const blob = bufferToWave(buffer, 0, buffer.length);
-            dectalkPlayer.src = URL.createObjectURL(blob);
-            dectalkText.value = text;
-            dectalkContainer.classList.remove('hidden');
+            if (dectalkPlayer) {
+                dectalkPlayer.src = URL.createObjectURL(blob);
+            } else {
+                errorLog('dectalkPlayer element not found');
+                throw new Error('UI element not found: dectalkPlayer');
+            }
+            
+            if (dectalkText) {
+                dectalkText.value = text;
+            } else {
+                errorLog('dectalkText element not found');
+                throw new Error('UI element not found: dectalkText');
+            }
+            
+            if (dectalkContainer) {
+                dectalkContainer.classList.remove('hidden');
+            } else {
+                errorLog('dectalkContainer element not found');
+            }
         } catch (err) {
             errorLog('Error loading DECTalk', err);
             alert('Error loading DECTalk: ' + err.message);

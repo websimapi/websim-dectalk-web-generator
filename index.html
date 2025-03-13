@@ -4,12 +4,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DECTalk Web Generator</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Updated script loading for better compatibility and debugging -->
-    <script src="https://cdn.jsdelivr.net/npm/sam-js@0.1.2/dist/sam.min.js"></script>
+    <!-- Updated script loading for better compatibility -->
+    <script src="https://cdn.jsdelivr.net/npm/sam-js@0.3.1/dist/samjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/recorderjs@1.0.1/dist/recorder.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/meyda@5.6.2/dist/web/meyda.min.js"></script>
     <script>
-        // Debug library loading status
+        // Make SamJs available globally
         window.addEventListener('DOMContentLoaded', function() {
             console.log('Library status:');
             console.log('- SAM:', typeof SAM);
@@ -18,10 +18,13 @@
             console.log('- window.SamJs:', typeof window.SamJs);
             console.log('- Meyda:', typeof Meyda);
             
-            // Create global SamJs if needed
-            if (typeof window.SAM === 'function' && typeof window.SamJs === 'undefined') {
-                window.SamJs = window.SAM;
-                console.log('Created SamJs from SAM');
+            // Ensure SamJs is available globally
+            if (typeof window.SamJs === 'undefined') {
+                // For versions that export as 'samjs'
+                if (typeof window.samjs !== 'undefined') {
+                    window.SamJs = window.samjs;
+                    console.log('Created SamJs from samjs');
+                }
             }
         });
     </script>

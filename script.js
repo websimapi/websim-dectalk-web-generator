@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // DOM elements
     const audioUpload = document.getElementById('audio-upload');
     const fileName = document.getElementById('file-name');
@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyText = document.getElementById('copy-text');
     const inputText = document.getElementById('input-text');
     const loadText = document.getElementById('load-text');
+    
+    // Import Sam.js dynamically
+    const SamJs = await import('sam-js').then(module => module.default || module);
     
     // Initialize DECTalk synthesizer
     let dectalk = null;

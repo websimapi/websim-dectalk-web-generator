@@ -1,0 +1,64 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DECTalk Web Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>DECTalk Web Generator</h1>
+        <p class="description">Upload an audio file, convert it to DECTalk, and share the input string with others</p>
+        
+        <div class="upload-container">
+            <label for="audio-upload" class="upload-button">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 16V7.85L8.4 10.45L7 9L12 4L17 9L15.6 10.45L13 7.85V16H11ZM6 20C5.45 20 4.97917 19.8042 4.5875 19.4125C4.19583 19.0208 4 18.55 4 18V15H6V18H18V15H20V18C20 18.55 19.8042 19.0208 19.4125 19.4125C19.0208 19.8042 18.55 20 18 20H6Z" fill="currentColor"/>
+                </svg>
+                <span>Choose Audio File</span>
+            </label>
+            <input type="file" id="audio-upload" accept="audio/*" style="display: none">
+            <p id="file-name">No file selected</p>
+        </div>
+        
+        <div class="player-container hidden" id="player-container">
+            <h2>Original Audio</h2>
+            <audio id="audio-player" controls></audio>
+            <button id="convert-button" class="action-button">Convert to DECTalk</button>
+        </div>
+        
+        <div class="dectalk-container hidden" id="dectalk-container">
+            <h2>DECTalk Output</h2>
+            <div class="dectalk-player">
+                <audio id="dectalk-player" controls></audio>
+                <button id="play-dectalk" class="control-button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button id="stop-dectalk" class="control-button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 6H16V18H8V6Z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="textarea-container">
+                <textarea id="dectalk-text" rows="5" readonly></textarea>
+                <button id="copy-text" class="action-button">Copy DECTalk Text</button>
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <h2>Load DECTalk From Text</h2>
+            <textarea id="input-text" rows="5" placeholder="Paste DECTalk text here to load"></textarea>
+            <button id="load-text" class="action-button">Load From Text</button>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/recorderjs@1.0.1/dist/recorder.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dectalk-web@1.0.0/dist/dectalk.min.js"></script>
+    <script src="script.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

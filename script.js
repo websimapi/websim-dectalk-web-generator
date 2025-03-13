@@ -20,39 +20,144 @@ document.addEventListener('DOMContentLoaded', function() {
     let audioBuffer = null;
     let isPlaying = false;
     let source = null;
+    let sam = null;
+    let meydaAnalyzer = null;
     
     // Initialize DECTalk
     function initDECTalk() {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
+        if (!sam) {
+            sam = new SamJs();
+        }
         if (!dectalk) {
-            // This is a placeholder for the actual DECTalk initialization
-            // In a real implementation, you would use the actual DECTalk library
             dectalk = {
                 textToSpeech: function(text) {
-                    // This would be replaced with actual DECTalk processing
-                    // For demo purposes, we're creating a simple audio signal
-                    const sampleRate = audioContext.sampleRate;
-                    const duration = text.length * 0.1; // Rough estimate
-                    const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
-                    const data = buffer.getChannelData(0);
+                    // Process the DECTalk-style text and convert to audio
+                    let processedText = processDECTalkText(text);
                     
-                    // Generate a simple tone for demonstration
-                    for (let i = 0; i < data.length; i++) {
-                        const t = i / sampleRate;
-                        data[i] = Math.sin(440 * Math.PI * 2 * t) * Math.exp(-3 * t);
+                    // Use SAM.js to generate speech
+                    const audioData = sam.buf8(processedText);
+                    
+                    // Convert to AudioBuffer
+                    const buffer = audioContext.createBuffer(1, audioData.length, 22050);
+                    const channelData = buffer.getChannelData(0);
+                    
+                    // Convert 8-bit audio to float
+                    for (let i = 0; i < audioData.length; i++) {
+                        channelData[i] = (audioData[i] - 128) / 128.0;
                     }
                     
                     return buffer;
                 },
                 analyze: function(audioBuffer) {
-                    // This would analyze audio and convert to DECTalk format
-                    // For demo, return dummy text
-                    return "[:nh][:rate 180][:phoneme arpabet]Hello, this is DECTalk. Your audio has been converted.";
+                    // Extract features from the audio
+                    const features = extractAudioFeatures(audioBuffer);
+                    
+                    // Convert features to DECTalk format
+                    const dectalkString = featuresToDECTalk(features);
+                    
+                    return dectalkString;
                 }
             };
         }
+    }
+    
+    // Process DECTalk text to make it compatible with SAM.js
+    function processDECTalkText(text) {
+        // Remove DECTalk-specific commands and convert to SAM format
+        let processed = text;
+        
+        // Remove rate, pitch, and other DECTalk commands
+        processed = processed.replace(/\[:([a-z]+)\s*([0-9]+)\]/gi, '');
+        processed = processed.replace(/\[:([a-z]+)\]/gi, '');
+        processed = processed.replace(/\[([a-z]+)\]/gi, '');
+        
+        // Remove phoneme markers
+        processed = processed.replace(/\[:phoneme [a-z]+\]/gi, '');
+        
+        // Simple text cleanup
+        return processed.replace(/[^\w\s]/gi, '').trim();
+    }
+    
+    // Extract audio features using Meyda
+    function extractAudioFeatures(buffer) {
+        const features = {
+            words: [],
+            pitch: [],
+            volume: [],
+            speed: 180, // Default speed
+            phonemes: []
+        };
+        
+        try {
+            // Get audio data
+            const audioData = buffer.getChannelData(0);
+            const sampleRate = buffer.sampleRate;
+            
+            // Configure Meyda for feature extraction
+            const frameSize = 1024;
+            const hopSize = 512;
+            
+            // Create offline analyzer
+            for (let i = 0; i < audioData.length - frameSize; i += hopSize) {
+                const frame = audioData.slice(i, i + frameSize);
+                
+                // Use Meyda to extract features
+                const frameFeatures = Meyda.extract(["rms", "spectralCentroid"], frame, sampleRate);
+                
+                // Store volume (rms)
+                features.volume.push(frameFeatures.rms);
+                
+                // Store pitch estimation from spectral centroid
+                features.pitch.push(frameFeatures.spectralCentroid);
+            }
+            
+            // Generate approximately 5-10 words based on audio length
+            const wordCount = Math.max(5, Math.min(10, Math.floor(buffer.duration * 2)));
+            
+            // Generate placeholder words
+            const wordOptions = ["hello", "world", "this", "is", "dectalk", "speech", "synthesis", "robot", "voice", "computer"];
+            for (let i = 0; i < wordCount; i++) {
+                features.words.push(wordOptions[Math.floor(Math.random() * wordOptions.length)]);
+            }
+            
+            // Determine speech rate based on audio length and estimated word count
+            features.speed = Math.round(180 * (wordCount / buffer.duration) / 3);
+            features.speed = Math.max(120, Math.min(250, features.speed)); // Clamp to reasonable range
+            
+        } catch (error) {
+            console.error("Error extracting features:", error);
+        }
+        
+        return features;
+    }
+    
+    // Convert features to DECTalk format
+    function featuresToDECTalk(features) {
+        let dectalkText = "";
+        
+        // Add DECTalk header with speed setting
+        dectalkText += `[:nh][:rate ${features.speed}][:phoneme arpabet]`;
+        
+        // Add words with punctuation
+        let sentence = features.words.join(" ");
+        
+        // Add some variation based on the extracted features
+        if (features.pitch.length > 0) {
+            // Check if pitch varies a lot (question mark)
+            const pitchVariation = Math.max(...features.pitch) / Math.min(...features.pitch);
+            if (pitchVariation > 2) {
+                sentence += "?";
+            } else {
+                sentence += ".";
+            }
+        }
+        
+        dectalkText += sentence;
+        
+        return dectalkText;
     }
     
     // File upload handler
@@ -74,6 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             } catch (err) {
                 console.error('Error decoding audio data', err);
+                alert('Error decoding audio file. Please try a different format (WAV or MP3).');
             }
         };
         reader.readAsArrayBuffer(file);
@@ -87,19 +193,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            // Convert audio to DECTalk format
-            const dectalkString = dectalk.analyze(audioBuffer);
-            dectalkText.value = dectalkString;
+            // Display loading message
+            this.textContent = "Converting...";
+            this.disabled = true;
             
-            // Generate audio from DECTalk
-            const generatedBuffer = dectalk.textToSpeech(dectalkString);
-            const blob = bufferToWave(generatedBuffer, 0, generatedBuffer.length);
-            dectalkPlayer.src = URL.createObjectURL(blob);
+            // Use setTimeout to allow UI to update before heavy processing
+            setTimeout(() => {
+                try {
+                    // Convert audio to DECTalk format
+                    const dectalkString = dectalk.analyze(audioBuffer);
+                    dectalkText.value = dectalkString;
+                    
+                    // Generate audio from DECTalk
+                    const generatedBuffer = dectalk.textToSpeech(dectalkString);
+                    const blob = bufferToWave(generatedBuffer, 0, generatedBuffer.length);
+                    dectalkPlayer.src = URL.createObjectURL(blob);
+                    
+                    dectalkContainer.classList.remove('hidden');
+                    
+                    // Reset button
+                    convertButton.textContent = "Convert to DECTalk";
+                    convertButton.disabled = false;
+                } catch (err) {
+                    console.error('Error converting to DECTalk', err);
+                    alert('Error converting to DECTalk: ' + err.message);
+                    convertButton.textContent = "Convert to DECTalk";
+                    convertButton.disabled = false;
+                }
+            }, 100);
             
-            dectalkContainer.classList.remove('hidden');
         } catch (err) {
             console.error('Error converting to DECTalk', err);
             alert('Error converting to DECTalk: ' + err.message);
+            convertButton.textContent = "Convert to DECTalk";
+            convertButton.disabled = false;
         }
     });
     
@@ -210,4 +337,3 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-

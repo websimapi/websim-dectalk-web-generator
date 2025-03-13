@@ -134,6 +134,11 @@ textarea {
     background-color: #27ae60;
 }
 
+.action-button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
 .input-container {
     padding: 1.5rem;
     border-radius: 8px;
@@ -158,4 +163,3 @@ textarea {
         margin-top: 0.5rem;
     }
 }
-

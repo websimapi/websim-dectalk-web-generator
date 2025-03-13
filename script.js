@@ -29,8 +29,17 @@ document.addEventListener('DOMContentLoaded', function() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
         if (!sam) {
-            // Access SamJs from global scope since we're loading it via script tag
-            sam = new window.SamJs();
+            // Fix for SamJs constructor access - it's exposed as 'SamJs' in the global scope
+            if (typeof window.SamJs === 'function') {
+                sam = new window.SamJs();
+            } else if (typeof window.SAM === 'function') {
+                sam = new window.SAM();
+            } else if (typeof SamJs === 'function') {
+                sam = new SamJs();
+            } else {
+                console.error('SamJs library not properly loaded');
+                alert('Speech synthesis library not loaded properly. Please refresh the page and try again.');
+            }
         }
         if (!dectalk) {
             dectalk = {

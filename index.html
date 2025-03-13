@@ -4,13 +4,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DECTalk Web Generator</title>
     <link rel="stylesheet" href="styles.css">
-    <script type="importmap">
-    {
-      "imports": {
-        "sam-js": "https://cdn.jsdelivr.net/npm/sam-js@0.1.2/dist/sam.min.js"
-      }
-    }
-    </script>
+    <!-- Removed importmap and added direct script tags -->
+    <script src="https://cdn.jsdelivr.net/npm/sam-js@0.1.2/dist/sam.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/recorderjs@1.0.1/dist/recorder.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/meyda@5.6.2/dist/web/meyda.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -63,8 +60,6 @@
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/recorderjs@1.0.1/dist/recorder.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/meyda@5.6.2/dist/web/meyda.min.js"></script>
     <script src="script.js"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>

@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
     // DOM elements
     const audioUpload = document.getElementById('audio-upload');
     const fileName = document.getElementById('file-name');
@@ -7,17 +7,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     const convertButton = document.getElementById('convert-button');
     const dectalkContainer = document.getElementById('dectalk-container');
     const dectalkPlayer = document.getElementById('dectalk-player');
-    const dectalkText = document.getElementById('dectalk-text');
+    const dectalkText = document.getElementById('dctalk-text');
     const playDectalk = document.getElementById('play-dectalk');
     const stopDectalk = document.getElementById('stop-dectalk');
     const copyText = document.getElementById('copy-text');
     const inputText = document.getElementById('input-text');
     const loadText = document.getElementById('load-text');
     
-    // Import Sam.js dynamically
-    const SamJs = await import('sam-js').then(module => module.default || module);
-    
-    // Initialize DECTalk synthesizer
+    // Initialize variables directly instead of dynamic import
     let dectalk = null;
     let audioContext = null;
     let audioBuffer = null;
@@ -32,7 +29,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
         if (!sam) {
-            sam = new SamJs();
+            // Access SamJs from global scope since we're loading it via script tag
+            sam = new window.SamJs();
         }
         if (!dectalk) {
             dectalk = {

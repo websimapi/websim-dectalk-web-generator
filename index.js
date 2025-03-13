@@ -361,7 +361,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentAudioSource.onended = function() {
                         isPlaying = false;
                     };
-                    currentAudioSource.play();
+                    currentAudioSource.onerror = function(e) {
+                        errorLog('Audio playback error', e);
+                        alert('Failed to play audio. The DECTalk text is still available to copy.');
+                        isPlaying = false;
+                    };
+                    currentAudioSource.play().catch(err => {
+                        errorLog('Failed to start audio playback', err);
+                        alert('Failed to play audio. The DECTalk text is still available to copy.');
+                        isPlaying = false;
+                    });
                     isPlaying = true;
                 } else {
                     throw new Error('Failed to generate audio URL');
@@ -371,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (err) {
             errorLog('Error playing DECTalk', err);
-            alert('Error playing DECTalk: ' + err.message);
+            alert('Error playing DECTalk: ' + err.message + '\nThe DECTalk text is still available to copy.');
         }
     });
     
@@ -419,6 +428,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const audioUrl = Say.say(text, 'wav');
                 if (dectalkPlayer && audioUrl) {
                     dectalkPlayer.src = audioUrl;
+                    dectalkPlayer.onerror = function(e) {
+                        errorLog('Error loading DECTalk audio', e);
+                        // Continue showing the text even if audio fails
+                    };
                     debugLog('Audio generated from text input', audioUrl);
                 }
             } else {

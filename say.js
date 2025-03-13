@@ -44,15 +44,14 @@
                     // Build the API URL
                     const apiUrl = `${API_ENDPOINT}/say?text=${encodedText}&format=${format}`;
                     
-                    // In a real implementation, we would make a fetch request
+                    // In a real implementation, this would make a fetch request
                     // For now, we'll just return the API URL
                     console.log('[Say.js] Generated API URL for TTS');
                     audioCache.set(cacheKey, apiUrl);
                     return apiUrl;
                 } else {
-                    // Generate a mock audio URL - a small silent WAV file
-                    // In a real implementation, this would generate actual audio from the text
-                    const silentWavBase64 = "data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQYAAAAAAAAAAAAAAAAAAAAA";
+                    // Generate a more robust silent WAV file that's compatible with most browsers
+                    const silentWavBase64 = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
                     
                     // Log the DECTalk text for debugging
                     console.log('[Say.js] Generated mock audio for text:', text);

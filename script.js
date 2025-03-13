@@ -14,6 +14,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputText = document.getElementById('input-text');
     const loadText = document.getElementById('load-text');
     
+    // Debug logger function
+    function debugLog(message, data) {
+        console.log(`%c[DECTalk Debug] ${message}`, 'color: #3498db; font-weight: bold;', data || '');
+    }
+    
+    // Error logger function
+    function errorLog(message, error) {
+        console.error(`%c[DECTalk Error] ${message}`, 'color: #e74c3c; font-weight: bold;', error || '');
+    }
+    
     // Initialize variables directly instead of dynamic import
     let dectalk = null;
     let audioContext = null;
@@ -23,43 +33,113 @@ document.addEventListener('DOMContentLoaded', function() {
     let sam = null;
     let meydaAnalyzer = null;
     
+    // Check libraries on startup
+    debugLog('Checking libraries availability');
+    if (typeof window.SamJs === 'function') {
+        debugLog('SamJs found in window scope', window.SamJs);
+    } else if (typeof window.SAM === 'function') {
+        debugLog('SAM found in window scope', window.SAM);
+        window.SamJs = window.SAM;
+    } else if (typeof SamJs === 'function') {
+        debugLog('SamJs found in global scope', SamJs);
+    } else if (typeof SAM === 'function') {
+        debugLog('SAM found in global scope', SAM);
+        window.SamJs = SAM;
+    } else {
+        errorLog('Speech synthesis library (SamJs/SAM) not found', {
+            'window.SamJs': typeof window.SamJs,
+            'window.SAM': typeof window.SAM,
+            'SamJs': typeof SamJs,
+            'SAM': typeof SAM
+        });
+    }
+    
     // Initialize DECTalk
     function initDECTalk() {
+        debugLog('Initializing DECTalk');
+        
         if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (!sam) {
-            // Fix for SamJs constructor access - it's exposed as 'SamJs' in the global scope
-            if (typeof window.SamJs === 'function') {
-                sam = new window.SamJs();
-            } else if (typeof window.SAM === 'function') {
-                sam = new window.SAM();
-            } else if (typeof SamJs === 'function') {
-                sam = new SamJs();
-            } else {
-                console.error('SamJs library not properly loaded');
-                alert('Speech synthesis library not loaded properly. Please refresh the page and try again.');
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                debugLog('AudioContext created', audioContext);
+            } catch (err) {
+                errorLog('Failed to create AudioContext', err);
+                alert('Error: Could not create audio context. Please try a different browser.');
             }
         }
+        
+        if (!sam) {
+            try {
+                // Comprehensive check for SamJs with detailed debugging
+                if (typeof window.SamJs === 'function') {
+                    debugLog('Creating sam using window.SamJs constructor');
+                    sam = new window.SamJs();
+                } else if (typeof window.SAM === 'function') {
+                    debugLog('Creating sam using window.SAM constructor');
+                    sam = new window.SAM();
+                } else if (typeof SamJs === 'function') {
+                    debugLog('Creating sam using global SamJs constructor');
+                    sam = new SamJs();
+                } else if (typeof SAM === 'function') {
+                    debugLog('Creating sam using global SAM constructor');
+                    sam = new SAM();
+                } else {
+                    const err = new Error('Speech synthesis library not found');
+                    errorLog('Could not find SAM or SamJs constructors', {
+                        'window.SamJs': typeof window.SamJs,
+                        'window.SAM': typeof window.SAM, 
+                        'SamJs': typeof SamJs,
+                        'SAM': typeof SAM
+                    });
+                    throw err;
+                }
+                
+                // Verify sam was created
+                if (sam) {
+                    debugLog('Sam instance created successfully', sam);
+                } else {
+                    throw new Error('Failed to create Sam instance');
+                }
+            } catch (err) {
+                errorLog('Failed to initialize speech synthesis', err);
+                alert('Speech synthesis library not loaded properly. Please try refreshing the page or using a different browser.');
+                return false;
+            }
+        }
+        
         if (!dectalk) {
+            debugLog('Creating dectalk interface');
             dectalk = {
                 textToSpeech: function(text) {
+                    debugLog('Converting text to speech', text.substring(0, 50) + '...');
                     // Process the DECTalk-style text and convert to audio
                     let processedText = processDECTalkText(text);
+                    debugLog('Processed text', processedText.substring(0, 50) + '...');
                     
                     // Use SAM.js to generate speech
-                    const audioData = sam.buf8(processedText);
-                    
-                    // Convert to AudioBuffer
-                    const buffer = audioContext.createBuffer(1, audioData.length, 22050);
-                    const channelData = buffer.getChannelData(0);
-                    
-                    // Convert 8-bit audio to float
-                    for (let i = 0; i < audioData.length; i++) {
-                        channelData[i] = (audioData[i] - 128) / 128.0;
+                    try {
+                        if (!sam || typeof sam.buf8 !== 'function') {
+                            errorLog('Invalid SAM instance', sam);
+                            throw new Error('Speech synthesis not properly initialized');
+                        }
+                        
+                        const audioData = sam.buf8(processedText);
+                        debugLog('Generated audio data', { length: audioData.length });
+                        
+                        // Convert to AudioBuffer
+                        const buffer = audioContext.createBuffer(1, audioData.length, 22050);
+                        const channelData = buffer.getChannelData(0);
+                        
+                        // Convert 8-bit audio to float
+                        for (let i = 0; i < audioData.length; i++) {
+                            channelData[i] = (audioData[i] - 128) / 128.0;
+                        }
+                        
+                        return buffer;
+                    } catch (err) {
+                        errorLog('Failed to generate speech', err);
+                        throw new Error('Error generating speech: ' + err.message);
                     }
-                    
-                    return buffer;
                 },
                 analyze: function(audioBuffer) {
                     // Extract features from the audio
@@ -72,6 +152,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
         }
+        
+        return true; // Return true if initialization was successful
     }
     
     // Process DECTalk text to make it compatible with SAM.js
@@ -138,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
             features.speed = Math.max(120, Math.min(250, features.speed)); // Clamp to reasonable range
             
         } catch (error) {
-            console.error("Error extracting features:", error);
+            errorLog("Error extracting features", error);
         }
         
         return features;
@@ -175,22 +257,38 @@ document.addEventListener('DOMContentLoaded', function() {
         const file = e.target.files[0];
         if (!file) return;
         
+        debugLog('File selected', { name: file.name, type: file.type, size: file.size });
         fileName.textContent = file.name;
         const fileURL = URL.createObjectURL(file);
         audioPlayer.src = fileURL;
         playerContainer.classList.remove('hidden');
         
         // Read the audio file
-        initDECTalk();
+        const initialized = initDECTalk();
+        if (!initialized) {
+            errorLog('DECTalk initialization failed');
+            return;
+        }
+        
         const reader = new FileReader();
         reader.onload = async function(e) {
             try {
+                debugLog('File loaded, decoding audio data');
                 const arrayBuffer = e.target.result;
                 audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                debugLog('Audio decoded successfully', { 
+                    duration: audioBuffer.duration,
+                    channels: audioBuffer.numberOfChannels,
+                    sampleRate: audioBuffer.sampleRate
+                });
             } catch (err) {
-                console.error('Error decoding audio data', err);
+                errorLog('Error decoding audio data', err);
                 alert('Error decoding audio file. Please try a different format (WAV or MP3).');
             }
+        };
+        reader.onerror = function(err) {
+            errorLog('Error reading file', err);
+            alert('Error reading audio file. Please try again.');
         };
         reader.readAsArrayBuffer(file);
     });
@@ -203,6 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
+            debugLog('Starting conversion process');
             // Display loading message
             this.textContent = "Converting...";
             this.disabled = true;
@@ -212,10 +311,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     // Convert audio to DECTalk format
                     const dectalkString = dectalk.analyze(audioBuffer);
+                    debugLog('Generated DECTalk string', dectalkString.substring(0, 50) + '...');
                     dectalkText.value = dectalkString;
                     
                     // Generate audio from DECTalk
+                    debugLog('Generating speech from DECTalk string');
                     const generatedBuffer = dectalk.textToSpeech(dectalkString);
+                    debugLog('Speech generated', { 
+                        duration: generatedBuffer.duration,
+                        channels: generatedBuffer.numberOfChannels,
+                        sampleRate: generatedBuffer.sampleRate
+                    });
+                    
                     const blob = bufferToWave(generatedBuffer, 0, generatedBuffer.length);
                     dectalkPlayer.src = URL.createObjectURL(blob);
                     
@@ -225,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     convertButton.textContent = "Convert to DECTalk";
                     convertButton.disabled = false;
                 } catch (err) {
-                    console.error('Error converting to DECTalk', err);
+                    errorLog('Error converting to DECTalk', err);
                     alert('Error converting to DECTalk: ' + err.message);
                     convertButton.textContent = "Convert to DECTalk";
                     convertButton.disabled = false;
@@ -233,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 100);
             
         } catch (err) {
-            console.error('Error converting to DECTalk', err);
+            errorLog('Error in conversion process', err);
             alert('Error converting to DECTalk: ' + err.message);
             convertButton.textContent = "Convert to DECTalk";
             convertButton.disabled = false;
@@ -289,55 +396,61 @@ document.addEventListener('DOMContentLoaded', function() {
             dectalkText.value = text;
             dectalkContainer.classList.remove('hidden');
         } catch (err) {
-            console.error('Error loading DECTalk', err);
+            errorLog('Error loading DECTalk', err);
             alert('Error loading DECTalk: ' + err.message);
         }
     });
     
     // Helper function to convert AudioBuffer to WAV Blob
     function bufferToWave(buffer, start, end) {
-        const numOfChan = buffer.numberOfChannels;
-        const length = (end - start) * numOfChan * 2 + 44;
-        const output = new ArrayBuffer(length);
-        const view = new DataView(output);
-        const sampleRate = buffer.sampleRate;
-        
-        // RIFF header
-        writeString(view, 0, 'RIFF');
-        view.setUint32(4, length - 8, true);
-        writeString(view, 8, 'WAVE');
-        
-        // FMT header
-        writeString(view, 12, 'fmt ');
-        view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true);
-        view.setUint16(22, numOfChan, true);
-        view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * numOfChan * 2, true);
-        view.setUint16(32, numOfChan * 2, true);
-        view.setUint16(34, 16, true);
-        
-        // Data header
-        writeString(view, 36, 'data');
-        view.setUint32(40, length - 44, true);
-        
-        // Write data
-        const channelData = [];
-        let offset = 44;
-        
-        for (let i = 0; i < numOfChan; i++) {
-            channelData.push(buffer.getChannelData(i));
-        }
-        
-        for (let i = start; i < end; i++) {
-            for (let channel = 0; channel < numOfChan; channel++) {
-                const sample = Math.max(-1, Math.min(1, channelData[channel][i]));
-                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-                offset += 2;
+        try {
+            debugLog('Converting AudioBuffer to WAV', { start, end });
+            const numOfChan = buffer.numberOfChannels;
+            const length = (end - start) * numOfChan * 2 + 44;
+            const output = new ArrayBuffer(length);
+            const view = new DataView(output);
+            const sampleRate = buffer.sampleRate;
+            
+            // RIFF header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, length - 8, true);
+            writeString(view, 8, 'WAVE');
+            
+            // FMT header
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numOfChan, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numOfChan * 2, true);
+            view.setUint16(32, numOfChan * 2, true);
+            view.setUint16(34, 16, true);
+            
+            // Data header
+            writeString(view, 36, 'data');
+            view.setUint32(40, length - 44, true);
+            
+            // Write data
+            const channelData = [];
+            let offset = 44;
+            
+            for (let i = 0; i < numOfChan; i++) {
+                channelData.push(buffer.getChannelData(i));
             }
+            
+            for (let i = start; i < end; i++) {
+                for (let channel = 0; channel < numOfChan; channel++) {
+                    const sample = Math.max(-1, Math.min(1, channelData[channel][i]));
+                    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+            
+            return new Blob([view], { type: 'audio/wav' });
+        } catch (err) {
+            errorLog('Error converting buffer to WAV', err);
+            throw new Error('Failed to create audio file: ' + err.message);
         }
-        
-        return new Blob([view], { type: 'audio/wav' });
     }
     
     // Helper to write strings to DataView
@@ -346,4 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
             view.setUint8(offset + i, string.charCodeAt(i));
         }
     }
+    
+    debugLog('DECTalk Web Generator initialized');
 });
